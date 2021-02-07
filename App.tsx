@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tailwind from "tailwind-rn";
-import { Platform, Text, View } from "react-native";
+import { Platform, View } from "react-native";
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Quizz } from "./components/Quizz";
@@ -15,7 +15,7 @@ Notifications.setNotificationHandler({
 
 export default function App() {
   const [expoPushToken, setExpoPushToken] = useState('');
-  const [quizzes, setQuizzes] = useState<Date[]>([]);
+  const [quizzes, setQuizzes] = useState<Date[]>([new Date(2021, 2, 7)]);
   const notificationListener = useRef();
   const responseListener = useRef();
 
@@ -24,10 +24,10 @@ export default function App() {
     Notifications.scheduleNotificationAsync({
       content: {
         title: "Pointage",
-        body: "Qu'as-tu fait aujourd'hui ?",
+        body: "Qu'as-tu fait aujourd'hui Michael ?",
         vibrate: [1, 2, 1]
       },
-      trigger: {hour: 15, minute: 25, repeats: true}
+      trigger: {hour: 18, minute: 0, repeats: true}
     })
       .then(value => console.log(value));
 
@@ -56,8 +56,7 @@ export default function App() {
   }, [quizzes]);
 
   return (
-    <View style={tailwind("flex items-center mt-10")}>
-      <Text style={tailwind("bg-gray-300 rounded p-4")}>Open up App.tsx to start working on your app!</Text>
+    <View style={tailwind("flex items-center mt-20")}>
       <Quizz quizz={quizzes[0]} onQuizzDone={resetCurrentNotification}/>
     </View>
   );
