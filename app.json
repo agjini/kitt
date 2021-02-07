@@ -1,12 +1,24 @@
 {
   "name": "kitt",
-  "displayName": "kitt",
+  "displayName": "Michael Knight assistant",
   "expo": {
     "name": "kitt",
     "slug": "kitt",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "assetBundlePatterns": [
       "**/*"
-    ]
+    ],
+    "ios": {
+      "bundleIdentifier": "co.gjini.kitt"
+    },
+    "android": {
+      "package": "co.gjini.kitt"
+    },
+    "icon": "./assets/icon.png",
+    "notification": {
+      "icon": "./assets/notify.png",
+      "color": "#FFFFFF"
+    },
+    "description": ""
   }
 }
