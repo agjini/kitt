@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tailwind from "tailwind-rn";
 import { Platform, View } from "react-native";
-import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Quizz } from "./components/Quizz";
 
@@ -13,46 +12,49 @@ Notifications.setNotificationHandler({
   }),
 });
 
+async function registerNotification() {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: "Pointage",
+      body: "Qu'as-tu fait aujourd'hui Michael ?",
+      vibrate: [1, 2, 1]
+    },
+    trigger: {hour: 18, minute: 0, repeats: true}
+  });
+  const d = new Date();
+  d.setHours(18, 0, 0, 0);
+  return d;
+}
+
 export default function App() {
-  const [expoPushToken, setExpoPushToken] = useState('');
   const [quizzes, setQuizzes] = useState<Date[]>([new Date(2021, 2, 7)]);
-  const notificationListener = useRef();
+  const [nextNotificationScheduledAt, setNextNotificationScheduledAt] = useState<Date>();
   const responseListener = useRef();
 
   useEffect(() => {
 
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Pointage",
-        body: "Qu'as-tu fait aujourd'hui Michael ?",
-        vibrate: [1, 2, 1]
-      },
-      trigger: {hour: 18, minute: 0, repeats: true}
-    })
-      .then(value => console.log(value));
+    if (Platform.OS !== 'web') {
+      registerNotification()
+        .then((d) => setNextNotificationScheduledAt(d));
 
-    // registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
+      // This listener is fired whenever a user taps on or interacts with a notification (works when app is foregrounded, backgrounded, or killed)
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+        const d = new Date(response.notification.date);
+        d.setHours(0, 0, 0, 0);
+        setQuizzes([...quizzes, d]);
+      });
 
-    // This listener is fired whenever a notification is received while the app is foregrounded
-    // notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-    //   setNotification(notification);
-    // });
-
-    // This listener is fired whenever a user taps on or interacts with a notification (works when app is foregrounded, backgrounded, or killed)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const d = new Date(response.notification.date);
-      d.setHours(0, 0, 0, 0);
-      setQuizzes([...quizzes, d]);
-    });
-
-    return () => {
-      // Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
-    };
+      return () => {
+        // Notifications.removeNotificationSubscription(notificationListener);
+        Notifications.removeNotificationSubscription(responseListener);
+      };
+    }
   }, []);
 
   const resetCurrentNotification = useCallback((quizzDone) => {
-    setQuizzes(quizzes.filter(d => d == quizzDone));
+    console.log("icici", quizzDone)
+    setQuizzes(quizzes.filter((d, i) => i !== 0));
   }, [quizzes]);
 
   return (
@@ -60,36 +62,4 @@ export default function App() {
       <Quizz quizz={quizzes[0]} onQuizzDone={resetCurrentNotification}/>
     </View>
   );
-}
-
-
-async function registerForPushNotificationsAsync() {
-  let token;
-  if (Constants.isDevice) {
-    const {status: existingStatus} = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const {status} = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      alert('Failed to get push token for push notification!');
-      return;
-    }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log(token);
-  } else {
-    alert('Must use physical device for Push Notifications');
-  }
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
-
-  return token;
 }
