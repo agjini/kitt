@@ -25,9 +25,15 @@ export interface Task {
   jira?: JiraTask;
 }
 
+export interface TempoConfig {
+  accountId: string;
+  apiKey: string;
+}
+
 export interface JiraConfig {
-  account: string,
-  token: string
+  account: string;
+  token: string;
+  tempo?: TempoConfig;
 }
 
 export interface Config {
