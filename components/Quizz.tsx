@@ -19,7 +19,7 @@ export interface JiraTask {
 export interface Task {
   id: string;
   title: string;
-  color: "gray" | "red" | "green" | "yellow";
+  color: "gray" | "red" | "green" | "yellow" | "blue" | "indigo" | "purple";
   percent?: number;
   jira?: JiraTask;
 }
@@ -48,21 +48,54 @@ const config: Config = {
       color: "gray"
     },
     {
-      id: "synergee",
-      title: "Synergee - Management",
-      color: "red",
-      percent: 0.5,
+      id: "synergee - support",
+      title: "Synergee - General Support Task",
+      color: "blue",
+      percent: 0.2,
       jira: {
         config: jiraConfig,
-        ticket: "SYN-16666",
+        ticket: "SYN-8155",
         keep: 2
       }
     },
     {
-      id: "synergee",
+      id: "synergee - coordinate",
+      title: "Synergee - Coordination",
+      color: "indigo",
+      percent: 0.2,
+      jira: {
+        config: jiraConfig,
+        ticket: "SYN-8154",
+        keep: 2
+      }
+    },
+    {
+      id: "synergee - team meeting",
+      title: "Synergee - Team meeting",
+      color: "purple",
+      percent: 0.1,
+      jira: {
+        config: jiraConfig,
+        ticket: "SYN-8153",
+        keep: 2
+      }
+    },
+    // {
+    //   id: "synergee - comm",
+    //   title: "Synergee - General Communication Task",
+    //   color: "red",
+    //   percent: 0.5,
+    //   jira: {
+    //     config: jiraConfig,
+    //     ticket: "SYN-8152",
+    //     keep: 2
+    //   }
+    // },
+    {
+      id: "synergee - dev",
       title: "Synergee - Dev",
       color: "yellow",
-      percent: 0.1,
+      percent: 0.5,
       jira: {
         config: jiraConfig,
         status: "6 In Progress"

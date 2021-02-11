@@ -13,10 +13,10 @@ interface TaskItemProps {
 export function TaskItem({index, value, selected = false, onSelect}: TaskItemProps) {
 
   return <View
-    style={tailwind(`p-2 m-1 rounded bg-${value.color}-200 text-${value.color}-500 text-xl font-bold text-center border-2 ${selected ? `border-${value.color}-500` : `border-${value.color}-200`}`)}
+    style={tailwind(`p-2 m-1 rounded bg-${value.color}-200 text-${value.color}-500 text-xl font-bold border-2 ${selected ? `border-${value.color}-500` : `border-${value.color}-200`}`)}
   >
     <Text
-      style={tailwind(`text-${value.color}-500 text-xl font-bold text-center`)}
+      style={tailwind(`text-${value.color}-500 text-xl font-bold`)}
       onPress={() => onSelect && onSelect(index)}>{value.title}</Text>
   </View>;
 }
