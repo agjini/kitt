@@ -36,7 +36,8 @@ function reloadFiles() {
     .then(files => files.filter(f => f.endsWith(".csv")).map(f => {
       const strings = f.split("/");
       return strings[strings.length - 1];
-    }));
+    }))
+    .then(files => files.sort());
 }
 
 async function readHistory(csvFile: string) {
@@ -88,8 +89,7 @@ export default function App() {
     for (const time of quizzDone.times) {
       timesheet[time.id] = `${time.time}h`;
     }
-    console.log("sfdsd",timesheet)
-    const all = [...history, ...timesheet];
+    const all = [...history, timesheet];
     const content = Csv.format(all);
     await FileSystem.writeAsStringAsync(csvFile, content, {encoding: FileSystem.EncodingType.UTF8})
     setQuizzes(quizzes.filter((d, i) => i !== 0));
