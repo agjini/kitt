@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import tailwind from "tailwind-rn";
-import { Platform, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import * as Notifications from 'expo-notifications';
 import * as FileSystem from 'expo-file-system';
+import * as DocumentPicker from 'expo-document-picker';
 import { format } from 'date-fns';
-import { Quizz, TimeResult } from "./components/Quizz";
+import { AntDesign } from '@expo/vector-icons';
+import { Config, Quizz, TimeResult } from "./components/Quizz";
 import { Csv } from "./utils/csv";
 import { FileList } from "./components/FileList";
 
@@ -49,21 +51,32 @@ async function readHistory(csvFile: string) {
   return [];
 }
 
+const configFile = `${FileSystem.documentDirectory}config.json`;
+
+async function readConfig(): Promise<Config | undefined> {
+  const info = await FileSystem.getInfoAsync(configFile);
+  if (!info.exists) {
+    return;
+  }
+  const inputContent = await FileSystem.readAsStringAsync(configFile, {encoding: FileSystem.EncodingType.UTF8});
+  return JSON.parse(inputContent) as Config;
+}
+
 export default function App() {
   const [quizzes, setQuizzes] = useState<Date[]>([new Date(2021, 2, 7)]);
   const [files, setFiles] = useState<string[]>([]);
+  const [config, setConfig] = useState<Config>();
   const responseListener = useRef();
 
   useEffect(() => {
+
     if (Platform.OS !== 'web') {
+
+      readConfig()
+        .then(config => setConfig(config));
+
       reloadFiles()
         .then(files => setFiles(files));
-    }
-  });
-
-  useEffect(() => {
-
-    if (Platform.OS !== 'web') {
 
       registerNotification()
         .then();
@@ -76,7 +89,6 @@ export default function App() {
       });
 
       return () => {
-        // Notifications.removeNotificationSubscription(notificationListener);
         Notifications.removeNotificationSubscription(responseListener);
       };
     }
@@ -101,13 +113,29 @@ export default function App() {
     setFiles(await reloadFiles());
   }
 
-  return (
-    <View style={tailwind("flex mt-20")}>
+  const downloadConfig = useCallback(async () => {
+    const document = await DocumentPicker.getDocumentAsync({type: "*/*"});
+    if (document.type == "success") {
+      await FileSystem.copyAsync({from: document.uri, to: configFile});
+    }
+  }, []);
+
+  if (!config) {
+    return <View style={tailwind("flex mt-20 items-center")}>
+      <Text style={tailwind("flex mt-20 text-center text-gray-700 text-lg")}>Donne moi un fichier de configuration stp
+        Michael !</Text>
+      <AntDesign
+        style={tailwind("flex mt-20 text-center text-blue-500 border-blue-500 text-4xl font-bold border-2 rounded p-4")}
+        name="upload"
+        onPress={() => downloadConfig()}/>
+    </View>;
+  } else {
+    return <View style={tailwind("flex mt-20")}>
       {
         quizzes.length > 0
-          ? <Quizz quizz={quizzes[0]} onQuizzDone={resetCurrentNotification}/>
+          ? <Quizz quizz={quizzes[0]} config={config} onQuizzDone={resetCurrentNotification}/>
           : <FileList files={files} onDelete={deleteFile}/>
       }
-    </View>
-  );
+    </View>;
+  }
 }

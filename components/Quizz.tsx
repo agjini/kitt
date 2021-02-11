@@ -6,6 +6,7 @@ import { TaskList } from "./TaskList";
 
 interface QuizzProps {
   quizz?: Date;
+  config: Config;
   onQuizzDone: (result: TimeResult) => void;
 }
 
@@ -34,81 +35,6 @@ export interface Config {
   tasks: Task[];
 }
 
-const jiraConfig: JiraConfig = {
-  account: "augustin.gjini@synergee.com",
-  token: "EVCZrENA24huoA5otLUT079F"
-}
-
-const config: Config = {
-  defaultJiraConfig: jiraConfig,
-  tasks: [
-    {
-      id: "none",
-      title: "Pas travaillé",
-      color: "gray"
-    },
-    {
-      id: "synergee - support",
-      title: "Synergee - General Support Task",
-      color: "blue",
-      percent: 0.2,
-      jira: {
-        config: jiraConfig,
-        ticket: "SYN-8155",
-        keep: 2
-      }
-    },
-    {
-      id: "synergee - coordinate",
-      title: "Synergee - Coordination",
-      color: "indigo",
-      percent: 0.2,
-      jira: {
-        config: jiraConfig,
-        ticket: "SYN-8154",
-        keep: 2
-      }
-    },
-    {
-      id: "synergee - team meeting",
-      title: "Synergee - Team meeting",
-      color: "purple",
-      percent: 0.1,
-      jira: {
-        config: jiraConfig,
-        ticket: "SYN-8153",
-        keep: 2
-      }
-    },
-    // {
-    //   id: "synergee - comm",
-    //   title: "Synergee - General Communication Task",
-    //   color: "red",
-    //   percent: 0.5,
-    //   jira: {
-    //     config: jiraConfig,
-    //     ticket: "SYN-8152",
-    //     keep: 2
-    //   }
-    // },
-    {
-      id: "synergee - dev",
-      title: "Synergee - Dev",
-      color: "yellow",
-      percent: 0.5,
-      jira: {
-        config: jiraConfig,
-        status: "6 In Progress"
-      }
-    },
-    {
-      id: "liane",
-      title: "Liane",
-      color: "green"
-    }
-  ]
-};
-
 export interface Time {
   id: string;
   title: string;
@@ -120,7 +46,7 @@ export interface TimeResult {
   times: Time[];
 }
 
-export function Quizz({quizz, onQuizzDone}: QuizzProps) {
+export function Quizz({quizz, config, onQuizzDone}: QuizzProps) {
   if (!quizz) {
     return <View>
       <Text style={tailwind("bg-gray-300 rounded p-4")}>Plus de pointage à faire pour aujourd'hui</Text>
