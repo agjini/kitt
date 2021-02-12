@@ -10,6 +10,7 @@ interface HourBoxProps {
 
 export function HourBox({value, tasks}: HourBoxProps) {
   const task = tasks[value];
-  return <View style={tailwind(`w-10 h-10 bg-${task.color}-200 text-${task.color}-500 m-1`)}>
+  return <View
+    style={tailwind(`w-10 h-10 bg-${task.color}-300 text-${task.color}-500 m-1 border-2 border-${task.color}-600 rounded`)}>
   </View>;
 }

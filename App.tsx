@@ -6,10 +6,11 @@ import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { format } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
-import { Config, Quizz, TimeResult } from "./components/Quizz";
+import { Config, Quizz, TempoConfig, Time, TimeResult } from "./components/Quizz";
 import { Csv } from "./utils/csv";
 import { FileList } from "./components/FileList";
 import { getJiraTicket, postTempoWorklog } from "./utils/jira";
+import { QuizzList } from "./components/QuizzList";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -53,6 +54,20 @@ async function readHistory(csvFile: string) {
 }
 
 const configFile = `${FileSystem.documentDirectory}config.json`;
+const quizzTodoFile = `${FileSystem.documentDirectory}todo.json`;
+
+async function readQuizzTodo(): Promise<Date[]> {
+  const info = await FileSystem.getInfoAsync(quizzTodoFile);
+  if (!info.exists) {
+    return [];
+  }
+  const inputContent = await FileSystem.readAsStringAsync(quizzTodoFile, {encoding: FileSystem.EncodingType.UTF8});
+  return JSON.parse(inputContent) as Date[];
+}
+
+async function saveQuizzTodo(quizzes: Date[]) {
+  await FileSystem.writeAsStringAsync(quizzTodoFile, JSON.stringify(quizzes), {encoding: FileSystem.EncodingType.UTF8});
+}
 
 async function readConfig(): Promise<Config | undefined> {
   const info = await FileSystem.getInfoAsync(configFile);
@@ -64,26 +79,61 @@ async function readConfig(): Promise<Config | undefined> {
 }
 
 async function persistCsvTimesheet(quizzDone: TimeResult) {
-  const csvFile = `${FileSystem.documentDirectory}${format(quizzDone.date, "yyyy")}.csv`;
-  const history = await readHistory(csvFile);
-  const timesheet: any = {date: format(quizzDone.date, "yyyy-MM-dd")};
-  for (const time of quizzDone.times) {
-    timesheet[time.id] = `${time.time}h`;
+  if (Platform.OS !== 'web') {
+    const csvFile = `${FileSystem.documentDirectory}${format(quizzDone.date, "yyyy")}.csv`;
+    const history = await readHistory(csvFile);
+    const timesheet: any = {date: format(quizzDone.date, "yyyy-MM-dd")};
+    for (const time of quizzDone.times) {
+      timesheet[time.id] = `${time.time}h`;
+    }
+    const all = [...history, timesheet];
+    const content = Csv.format(all);
+    await FileSystem.writeAsStringAsync(csvFile, content, {encoding: FileSystem.EncodingType.UTF8});
   }
-  const all = [...history, timesheet];
-  const content = Csv.format(all);
-  await FileSystem.writeAsStringAsync(csvFile, content, {encoding: FileSystem.EncodingType.UTF8});
+}
+
+interface TempoUpdate {
+  ticket: string;
+  time: number;
+  tempo: TempoConfig;
+}
+
+async function getTempoUpdates(times: Time[], config: Config) {
+  const tempoUpdates: TempoUpdate[] = [];
+  for (let time of times) {
+    const task = config.tasks.find(t => t.id === time.id);
+    if (task && task.jira) {
+      const jiraConfig = task.jira?.config || config.defaultJiraConfig;
+      if (jiraConfig.tempo) {
+        const ticket = await getJiraTicket(task.jira, jiraConfig);
+        if (ticket) {
+          tempoUpdates.push({ticket: ticket.key, time: time.time, tempo: jiraConfig.tempo});
+        }
+      }
+    }
+  }
+  return tempoUpdates;
 }
 
 export default function App() {
-  const [quizzes, setQuizzes] = useState<Date[]>([new Date(2021, 2, 7)]);
+  const [quizzes, setQuizzes] = useState<Date[]>([]);
+  const [currentQuizz, setCurrentQuizz] = useState<Date>();
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<Config>();
+  const [saving, setSaving] = useState(false);
   const responseListener = useRef();
+
+  const peristQuizzes = useCallback(async (quizzes: Date[]) => {
+    await saveQuizzTodo(quizzes);
+    setQuizzes(quizzes);
+  }, []);
 
   useEffect(() => {
 
     if (Platform.OS !== 'web') {
+
+      readQuizzTodo()
+        .then(quizzes => setQuizzes(quizzes));
 
       readConfig()
         .then(config => setConfig(config));
@@ -98,7 +148,9 @@ export default function App() {
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
         const d = new Date(response.notification.date);
         d.setHours(0, 0, 0, 0);
-        setQuizzes([...quizzes, d]);
+        const todo = [...quizzes, d];
+        peristQuizzes(todo)
+          .then(() => setCurrentQuizz(d));
       });
 
       return () => {
@@ -107,28 +159,30 @@ export default function App() {
     }
   }, []);
 
-  const resetCurrentNotification = useCallback(async (quizzDone: TimeResult) => {
-    await persistCsvTimesheet(quizzDone);
-    if (config) {
-      for (let time of quizzDone.times) {
-        const task = config.tasks.find(t => t.id === time.id);
-        if (task && task.jira) {
-          console.log("icici")
-          console.log("icici", config.defaultJiraConfig)
-          const jiraConfig = task.jira?.config || config.defaultJiraConfig;
-          if (jiraConfig.tempo) {
-            console.log("oui")
-            const ticket = await getJiraTicket(task, jiraConfig);
-            console.log("oui", ticket)
-            if (ticket) {
-              await postTempoWorklog(ticket, format(quizzDone.date, "yyyy-MM-dd"), "08:00:00", time.time * 3600, jiraConfig.tempo);
-            }
-          }
+  const selectQuizz = useCallback((q) => {
+    setCurrentQuizz(q);
+  }, []);
+
+  const closeQuizz = useCallback(() => {
+    setCurrentQuizz(undefined);
+  }, []);
+
+  const saveQuizz = useCallback(async (quizzDone: TimeResult) => {
+    setSaving(true);
+    try {
+      if (config) {
+        const tempoUpdates = await getTempoUpdates(quizzDone.times, config);
+        for (const tempoUpdate of tempoUpdates) {
+          await postTempoWorklog(tempoUpdate.ticket, format(quizzDone.date, "yyyy-MM-dd"), "08:00:00", tempoUpdate.time * 3600, tempoUpdate.tempo);
         }
       }
+      await persistCsvTimesheet(quizzDone);
+      await saveQuizzTodo(quizzes.filter(d => d !== quizzDone.date));
+      setCurrentQuizz(undefined);
+    } finally {
+      setSaving(false);
     }
-    setQuizzes(quizzes.filter((d, i) => i !== 0));
-  }, [quizzes, config]);
+  }, [quizzes, currentQuizz, config]);
 
   const deleteFile = async (file: string) => {
     const csvFile = `${FileSystem.documentDirectory}${file}`;
@@ -139,16 +193,16 @@ export default function App() {
   const downloadConfig = useCallback(async () => {
     const document = await DocumentPicker.getDocumentAsync({type: "*/*", copyToCacheDirectory: false});
     if (document.type == "success") {
-      await FileSystem.deleteAsync(document.uri);
-      await FileSystem.copyAsync({from: document.uri, to: configFile});
-      const newVar = await readConfig();
-      setConfig(newVar);
-      console.log("config", newVar)
+      if (Platform.OS !== 'web') {
+        await FileSystem.copyAsync({from: document.uri, to: configFile});
+        const newVar = await readConfig();
+        setConfig(newVar);
+      }
     }
   }, []);
 
   if (!config) {
-    return <View style={tailwind("flex mt-20 items-center")}>
+    return <View style={tailwind("flex mt-20 items-center h-full")}>
       <Text style={tailwind("flex mt-20 text-center text-gray-700 text-lg")}>Donne moi un fichier de configuration stp
         Michael !</Text>
       <Feather
@@ -156,11 +210,15 @@ export default function App() {
         name="settings"
         onPress={() => downloadConfig()}/>
     </View>;
+  } else if (currentQuizz) {
+    return <View style={tailwind("flex flex-col mt-20")}>
+      <Quizz quizz={currentQuizz} config={config} onQuizzDone={saveQuizz} loading={saving} onClose={closeQuizz}/>
+    </View>;
   } else {
     return <View style={tailwind("flex flex-col mt-20")}>
       {
         quizzes.length > 0
-          ? <Quizz quizz={quizzes[0]} config={config} onQuizzDone={resetCurrentNotification}/>
+          ? <QuizzList quizzes={quizzes} onSelect={selectQuizz}/>
           : <FileList files={files} onDelete={deleteFile}/>
       }
       <View style={tailwind("h-96")}/>

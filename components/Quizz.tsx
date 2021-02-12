@@ -1,13 +1,18 @@
-import { Button, GestureResponderEvent, LayoutChangeEvent, Text, View } from "react-native";
+import { ActivityIndicator, GestureResponderEvent, LayoutChangeEvent, Text, View } from "react-native";
 import React, { useCallback, useState } from "react";
 import tailwind from "tailwind-rn";
 import { HourBox } from "./HourBox";
 import { TaskList } from "./TaskList";
+import { format } from "date-fns";
+import { Feather } from '@expo/vector-icons';
+import { fr } from "date-fns/locale";
 
 interface QuizzProps {
   quizz?: Date;
   config: Config;
   onQuizzDone: (result: TimeResult) => void;
+  onClose: () => void;
+  loading?: boolean;
 }
 
 export interface JiraTask {
@@ -52,7 +57,7 @@ export interface TimeResult {
   times: Time[];
 }
 
-export function Quizz({quizz, config, onQuizzDone}: QuizzProps) {
+export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: QuizzProps) {
   if (!quizz) {
     return <View>
       <Text style={tailwind("bg-gray-300 rounded p-4")}>Plus de pointage à faire pour aujourd'hui</Text>
@@ -121,16 +126,26 @@ export function Quizz({quizz, config, onQuizzDone}: QuizzProps) {
     onQuizzDone({date: quizz, times});
   }, [hours]);
 
-  return <View style={tailwind("h-full")}>
-    <View style={tailwind("items-center")}><Text>{quizz.toLocaleDateString()}</Text></View>
-    <TaskList tasks={config.tasks} selectedValue={currentTaskIndex} onSelect={setCurrentTaskIndex}/>
-    <View style={tailwind("flex flex-row mt-32")}
+  return <View style={tailwind("h-full flex")}>
+    <View style={tailwind("items-center")}><Text
+      style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(quizz, "iiii dd MMM yyyy", {locale: fr})}</Text></View>
+    <TaskList tasks={config.tasks} selectedValue={currentTaskIndex} onSelect={setCurrentTaskIndex}
+              defaultJiraConfig={config.defaultJiraConfig}/>
+    <View style={tailwind("flex flex-row mt-10")}
           onLayout={onLayout}
           onTouchMove={onTouchMove}>
       {hours.map((h, i) => <HourBox key={i} value={h} tasks={config.tasks}/>)}
     </View>
-    <View style={tailwind("mt-6 p-6")}>
-      <Button title="Valider" onPress={() => submit()}/>
+    <View style={tailwind("mt-24")}>
+      {
+        loading
+          ? <ActivityIndicator animating={true} size="small" color="#0000ff"/>
+          : <View style={tailwind("flex flex-row justify-around w-full")}>
+            <Feather style={tailwind(`text-gray-500 font-bold text-4xl`)} name="skip-back" onPress={() => onClose()}/>
+            < Feather style={tailwind(`text-blue-500 font-bold text-4xl`)} name="save" onPress={() => submit()}/>
+          </View>
+      }
     </View>
   </View>;
 }
+
