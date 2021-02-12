@@ -1,6 +1,6 @@
 {
   "name": "kitt",
-  "displayName": "Michael Knight assistant",
+  "displayName": "L'assistant de Michael Knight",
   "expo": {
     "name": "kitt",
     "slug": "kitt",
@@ -12,7 +12,9 @@
       "bundleIdentifier": "co.gjini.kitt"
     },
     "android": {
-      "package": "co.gjini.kitt"
+      "package": "co.gjini.kitt",
+      "permissions": [],
+      "versionCode": 2
     },
     "icon": "./assets/icon.png",
     "notification": {
