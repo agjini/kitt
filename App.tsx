@@ -20,19 +20,24 @@ Notifications.setNotificationHandler({
   }),
 });
 
-async function registerNotification() {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+async function registerNotificationOnDay(weekday: number) {
+  const trigger = {hour: 18, minute: 0, weekday, repeats: true};
+  console.log("Triggered for ", trigger);
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Pointage",
       body: "Qu'as-tu fait aujourd'hui Michael ?",
       vibrate: [1, 2, 1]
     },
-    trigger: {hour: 18, minute: 0, repeats: true}
+    trigger: trigger
   });
-  const d = new Date();
-  d.setHours(18, 0, 0, 0);
-  return d;
+}
+
+async function registerNotification() {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  for (let weekday = 2; weekday < 7; weekday++) {
+    await registerNotificationOnDay(weekday);
+  }
 }
 
 function reloadFiles() {
