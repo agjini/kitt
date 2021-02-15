@@ -14,7 +14,7 @@
     "android": {
       "package": "co.gjini.kitt",
       "permissions": [],
-      "versionCode": 2
+      "versionCode": 3
     },
     "icon": "./assets/icon.png",
     "notification": {

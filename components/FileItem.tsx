@@ -1,4 +1,4 @@
-import { Alert, Text, View } from "react-native";
+import { Alert, Text, TouchableHighlight, View } from "react-native";
 import React, { useCallback } from "react";
 import tailwind from "tailwind-rn";
 import { Feather } from '@expo/vector-icons';
@@ -37,12 +37,19 @@ export function FileItem({file, onDelete}: FileItemProps) {
   }, []);
 
   return <View
-    style={tailwind(`flex flex-row items-center p-2 m-1 mx-6 border border-gray-200`)}
+    style={tailwind(`flex flex-row items-center p-2 m-1 mx-6 border border-gray-200 rounded`)}
   >
-    <Text
-      style={tailwind(`text-gray-700 text-xl mr-6`)}>{file}</Text>
-    <Feather style={tailwind(`text-blue-500 font-bold text-2xl mr-6`)} name="share" onPress={() => share(file)}/>
+    <TouchableHighlight
+      onPress={() => share(file)}
+    >
+      <View style={tailwind(`flex flex-row items-end`)}>
+        <Feather style={tailwind(`text-gray-500 font-bold text-2xl mr-2`)} name="share" onPress={() => share(file)}/>
+        <Text
+          style={tailwind(`text-blue-500 text-xl mr-6`)}>{file}</Text>
+      </View>
+    </TouchableHighlight>
     <View style={tailwind("flex-1")}/>
-    <Feather style={tailwind(`text-red-500 font-bold text-2xl mr-2`)} name="delete" onPress={() => deleteFile(file)}/>
+    <Feather style={tailwind(`text-red-500 font-bold text-2xl mr-2`)} name="delete"
+             onLongPress={() => deleteFile(file)}/>
   </View>;
 }
