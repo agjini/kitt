@@ -128,10 +128,9 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const responseListener = useRef();
 
-  const peristQuizzes = useCallback(async (quizzes: Date[]) => {
-    await saveQuizzTodo(quizzes);
-    setQuizzes(quizzes);
-  }, []);
+  useEffect(() => {
+    saveQuizzTodo(quizzes).then();
+  }, [quizzes]);
 
   useEffect(() => {
 
@@ -151,11 +150,10 @@ export default function App() {
 
       // This listener is fired whenever a user taps on or interacts with a notification (works when app is foregrounded, backgrounded, or killed)
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        const d = new Date(response.notification.date);
-        d.setHours(0, 0, 0, 0);
-        const todo = [...quizzes, d];
-        peristQuizzes(todo)
-          .then(() => setCurrentQuizz(d));
+        const date = new Date(response.notification.date);
+        date.setHours(0, 0, 0, 0);
+        setQuizzes([...quizzes, date]);
+        setCurrentQuizz(date);
       });
 
       return () => {
@@ -206,6 +204,18 @@ export default function App() {
     }
   }, []);
 
+  const [devModeCounter, setDevModeCounter] = useState(0);
+  const devMode = useCallback(async () => {
+    let count = devModeCounter + 1;
+    if (count >= 10) {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      setQuizzes([...quizzes, date]);
+      count = 0;
+    }
+    setDevModeCounter(count);
+  }, [devModeCounter]);
+
   if (!config) {
     return <View style={tailwind("flex mt-20 items-center h-full")}>
       <Text style={tailwind("flex mt-20 text-center text-gray-700 text-lg")}>Donne moi un fichier de configuration stp
@@ -220,14 +230,13 @@ export default function App() {
       <Quizz quizz={currentQuizz} config={config} onQuizzDone={saveQuizz} loading={saving} onClose={closeQuizz}/>
     </View>;
   } else {
-    return <View style={tailwind("flex flex-col mt-20")}>
+    return <View style={tailwind("h-full flex flex-col mt-20")} onTouchStart={() => devMode()}>
       {
         quizzes.length > 0
           ? <QuizzList quizzes={quizzes} onSelect={selectQuizz}/>
           : <FileList files={files} onDelete={deleteFile}/>
       }
-      <View style={tailwind("h-96")}/>
-      <View style={tailwind("flex flex-col mt-20 items-center")}>
+      <View style={tailwind("flex flex-col mt-20 items-center h-20")}>
         <Feather
           style={tailwind("mt-20 text-center text-gray-500 border-gray-500 text-2xl font-bold p-4")}
           name="settings"

@@ -1,4 +1,4 @@
-import { Text, TouchableHighlight, View } from "react-native";
+import { Text, View } from "react-native";
 import React from "react";
 import tailwind from "tailwind-rn";
 import { Feather } from '@expo/vector-icons';
@@ -11,12 +11,12 @@ interface QuizzItemProps {
 }
 
 export function QuizzItem({quizz, onSelect}: QuizzItemProps) {
-  return <TouchableHighlight
-    style={tailwind(`flex flex-row justify-between items-center p-2 px-6 m-1 mx-6 border border-gray-200`)}
-    onPress={() => onSelect(quizz)}>
+  return <View
+    style={tailwind(`flex flex-row rounded justify-between items-center p-2 px-6 m-1 mx-6 border border-gray-200`)}
+    onTouchStart={() => onSelect(quizz)}>
     <Text
       style={tailwind(`text-gray-700 text-xl mr-6`)}>{format(quizz, "iiii dd MMM yyyy", {locale: fr})}</Text>
     <View style={tailwind("flex-1")}/>
     <Feather style={tailwind(`text-blue-500 font-bold text-2xl`)} name="calendar"/>
-  </TouchableHighlight>;
+  </View>;
 }

@@ -27,11 +27,11 @@ export function TaskItem({index, value, selected = false, onSelect, defaultJiraC
 
   return <View
     style={tailwind(`p-2 m-1 rounded bg-${value.color}-200 text-${value.color}-500 text-xl font-bold border-2 ${selected ? `border-${value.color}-500` : `border-${value.color}-200`}`)}
+    onTouchStart={() => onSelect && onSelect(index)}
   >
     <View style={tailwind("flex flex-row items-center")}>
       <Text
-        style={tailwind(`text-${value.color}-500 text-lg font-bold`)}
-        onPress={() => onSelect && onSelect(index)}>{value.title}</Text>
+        style={tailwind(`text-${value.color}-500 text-lg font-bold`)}>{value.title}</Text>
       <View style={tailwind("flex-1")}/>
       {ticket && <Text style={tailwind(`text-gray-500 text-sm font-bold`)}>{ticket.key}</Text>}
     </View>

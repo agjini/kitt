@@ -127,22 +127,28 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
   }, [hours]);
 
   return <View style={tailwind("h-full flex")}>
-    <View style={tailwind("items-center")}><Text
-      style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(quizz, "iiii dd MMM yyyy", {locale: fr})}</Text></View>
+    <View style={tailwind("items-center")}>
+      <Text
+        style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(quizz, "iiii dd MMM yyyy", {locale: fr})}</Text>
+    </View>
     <TaskList tasks={config.tasks} selectedValue={currentTaskIndex} onSelect={setCurrentTaskIndex}
               defaultJiraConfig={config.defaultJiraConfig}/>
-    <View style={tailwind("flex flex-row mt-10")}
+    <View style={tailwind("flex flex-1 flex-row mt-10")}
           onLayout={onLayout}
           onTouchMove={onTouchMove}>
       {hours.map((h, i) => <HourBox key={i} value={h} tasks={config.tasks}/>)}
     </View>
-    <View style={tailwind("mt-24")}>
+    <View style={tailwind("absolute bottom-0 mt-24 w-full")}>
       {
         loading
-          ? <ActivityIndicator animating={true} size="small" color="#0000ff"/>
-          : <View style={tailwind("flex flex-row justify-around w-full")}>
-            <Feather style={tailwind(`text-gray-500 font-bold text-4xl`)} name="skip-back" onPress={() => onClose()}/>
-            < Feather style={tailwind(`text-blue-500 font-bold text-4xl`)} name="save" onPress={() => submit()}/>
+          ? <ActivityIndicator style={tailwind("text-blue-500 h-20")} animating={true} size="small" color="#0000ff"/>
+          : <View style={tailwind("flex flex-row w-full h-20 justify-around")}>
+            <View style={tailwind("items-center")} onTouchStart={() => onClose()}>
+              <Feather style={tailwind(`text-gray-500 font-bold text-4xl`)} name="skip-back"/>
+            </View>
+            <View style={tailwind("items-center")} onTouchStart={() => submit()}>
+              <Feather style={tailwind(`text-blue-500 font-bold text-4xl`)} name="save"/>
+            </View>
           </View>
       }
     </View>
