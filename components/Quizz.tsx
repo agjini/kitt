@@ -6,9 +6,10 @@ import { TaskList } from "./TaskList";
 import { format } from "date-fns";
 import { Feather } from '@expo/vector-icons';
 import { fr } from "date-fns/locale";
+import { QuizzDate, ToDate } from "../api/quizz";
 
 interface QuizzProps {
-  quizz?: Date;
+  quizz?: QuizzDate;
   config: Config;
   onQuizzDone: (result: TimeResult) => void;
   onClose: () => void;
@@ -53,7 +54,7 @@ export interface Time {
 }
 
 export interface TimeResult {
-  date: Date;
+  date: QuizzDate;
   times: Time[];
 }
 
@@ -129,7 +130,7 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
   return <View style={tailwind("h-full flex")}>
     <View style={tailwind("items-center")}>
       <Text
-        style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(quizz, "iiii dd MMM yyyy", {locale: fr})}</Text>
+        style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(ToDate(quizz), "iiii dd MMM yyyy", {locale: fr})}</Text>
     </View>
     <TaskList tasks={config.tasks} selectedValue={currentTaskIndex} onSelect={setCurrentTaskIndex}
               defaultJiraConfig={config.defaultJiraConfig}/>
@@ -141,12 +142,12 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
     <View style={tailwind("absolute bottom-0 mt-24 w-full")}>
       {
         loading
-          ? <ActivityIndicator style={tailwind("text-blue-500 h-20")} animating={true} size="small" color="#0000ff"/>
-          : <View style={tailwind("flex flex-row w-full h-20 justify-around")}>
-            <View style={tailwind("items-center")} onTouchStart={() => onClose()}>
+          ? <ActivityIndicator animating={true} size="large" color="#9CA3AF"/>
+          : <View style={tailwind("flex flex-row w-full justify-around")}>
+            <View style={tailwind("items-center p-10 border-2 border-gray-200 rounded")} onTouchStart={() => onClose()}>
               <Feather style={tailwind(`text-gray-500 font-bold text-4xl`)} name="skip-back"/>
             </View>
-            <View style={tailwind("items-center")} onTouchStart={() => submit()}>
+            <View style={tailwind("items-center p-10 border-2 border-gray-200 rounded")} onTouchStart={() => submit()}>
               <Feather style={tailwind(`text-blue-500 font-bold text-4xl`)} name="save"/>
             </View>
           </View>

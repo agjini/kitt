@@ -7,10 +7,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import { format } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { Config, Quizz, TempoConfig, Time, TimeResult } from "./components/Quizz";
-import { Csv } from "./utils/csv";
+import { Csv } from "./api/csv";
 import { FileList } from "./components/FileList";
-import { getJiraTicket, postTempoWorklog } from "./utils/jira";
+import { getJiraTicket, postTempoWorklog } from "./api/jira";
 import { QuizzList } from "./components/QuizzList";
+import { fr } from "date-fns/locale";
+import { FromDate, QuizzDate, ToDate } from "./api/quizz";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -61,16 +63,17 @@ async function readHistory(csvFile: string) {
 const configFile = `${FileSystem.documentDirectory}config.json`;
 const quizzTodoFile = `${FileSystem.documentDirectory}todo.json`;
 
-async function readQuizzTodo(): Promise<Date[]> {
+async function readQuizzTodo(): Promise<QuizzDate[]> {
   const info = await FileSystem.getInfoAsync(quizzTodoFile);
   if (!info.exists) {
     return [];
   }
   const inputContent = await FileSystem.readAsStringAsync(quizzTodoFile, {encoding: FileSystem.EncodingType.UTF8});
-  return JSON.parse(inputContent) as Date[];
+  console.log("Loading quizzes", inputContent)
+  return JSON.parse(inputContent) as QuizzDate[];
 }
 
-async function saveQuizzTodo(quizzes: Date[]) {
+async function saveQuizzTodo(quizzes: QuizzDate[]) {
   await FileSystem.writeAsStringAsync(quizzTodoFile, JSON.stringify(quizzes), {encoding: FileSystem.EncodingType.UTF8});
 }
 
@@ -85,9 +88,10 @@ async function readConfig(): Promise<Config | undefined> {
 
 async function persistCsvTimesheet(quizzDone: TimeResult) {
   if (Platform.OS !== 'web') {
-    const csvFile = `${FileSystem.documentDirectory}${format(quizzDone.date, "yyyy")}.csv`;
+    const date = ToDate(quizzDone.date);
+    const csvFile = `${FileSystem.documentDirectory}${format(date, "yyyy")}.csv`;
     const history = await readHistory(csvFile);
-    const timesheet: any = {date: format(quizzDone.date, "yyyy-MM-dd")};
+    const timesheet: any = {date: format(date, "yyyy-MM-dd", {locale: fr})};
     for (const time of quizzDone.times) {
       timesheet[time.id] = `${time.time}h`;
     }
@@ -121,21 +125,21 @@ async function getTempoUpdates(times: Time[], config: Config) {
 }
 
 export default function App() {
-  const [quizzes, setQuizzes] = useState<Date[]>([]);
-  const [currentQuizz, setCurrentQuizz] = useState<Date>();
+  const [quizzes, setQuizzes] = useState<QuizzDate[]>([]);
+  const [currentQuizz, setCurrentQuizz] = useState<number>(-1);
   const [files, setFiles] = useState<string[]>([]);
   const [config, setConfig] = useState<Config>();
   const [saving, setSaving] = useState(false);
+
+  const notificationListener = useRef();
   const responseListener = useRef();
 
   useEffect(() => {
-    saveQuizzTodo(quizzes).then();
+    saveQuizzTodo(quizzes).then(() => console.log("Quizzes todo saved"));
   }, [quizzes]);
 
   useEffect(() => {
-
     if (Platform.OS !== 'web') {
-
       readQuizzTodo()
         .then(quizzes => setQuizzes(quizzes));
 
@@ -146,28 +150,35 @@ export default function App() {
         .then(files => setFiles(files));
 
       registerNotification()
-        .then();
+        .then(() => console.log("Notifications registered"));
+    }
+  }, []);
 
-      // This listener is fired whenever a user taps on or interacts with a notification (works when app is foregrounded, backgrounded, or killed)
+  useEffect(() => {
+
+    if (Platform.OS !== 'web') {
+      notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+        const date = new Date(notification.date);
+        setQuizzes([...quizzes, FromDate(date)]);
+      });
+
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        const date = new Date(response.notification.date);
-        date.setHours(0, 0, 0, 0);
-        setQuizzes([...quizzes, date]);
-        setCurrentQuizz(date);
+        setCurrentQuizz(quizzes.length - 1);
       });
 
       return () => {
+        Notifications.removeNotificationSubscription(notificationListener);
         Notifications.removeNotificationSubscription(responseListener);
       };
     }
-  }, []);
+  }, [quizzes]);
 
   const selectQuizz = useCallback((q) => {
     setCurrentQuizz(q);
   }, []);
 
   const closeQuizz = useCallback(() => {
-    setCurrentQuizz(undefined);
+    setCurrentQuizz(-1);
   }, []);
 
   const saveQuizz = useCallback(async (quizzDone: TimeResult) => {
@@ -176,12 +187,12 @@ export default function App() {
       if (config) {
         const tempoUpdates = await getTempoUpdates(quizzDone.times, config);
         for (const tempoUpdate of tempoUpdates) {
-          await postTempoWorklog(tempoUpdate.ticket, format(quizzDone.date, "yyyy-MM-dd"), "08:00:00", tempoUpdate.time * 3600, tempoUpdate.tempo);
+          await postTempoWorklog(tempoUpdate.ticket, format(ToDate(quizzDone.date), "yyyy-MM-dd", {locale: fr}), "08:00:00", tempoUpdate.time * 3600, tempoUpdate.tempo);
         }
       }
       await persistCsvTimesheet(quizzDone);
-      await saveQuizzTodo(quizzes.filter(d => d !== quizzDone.date));
-      setCurrentQuizz(undefined);
+      setCurrentQuizz(-1);
+      setQuizzes(quizzes.filter(d => d !== quizzDone.date));
     } finally {
       setSaving(false);
     }
@@ -207,10 +218,15 @@ export default function App() {
   const [devModeCounter, setDevModeCounter] = useState(0);
   const devMode = useCallback(async () => {
     let count = devModeCounter + 1;
-    if (count >= 10) {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      setQuizzes([...quizzes, date]);
+    if (count >= 6) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Test Pointage",
+          body: "Notification de test Michael",
+          vibrate: [1, 2, 1]
+        },
+        trigger: {seconds: 2}
+      });
       count = 0;
     }
     setDevModeCounter(count);
@@ -225,12 +241,13 @@ export default function App() {
         name="settings"
         onPress={() => downloadConfig()}/>
     </View>;
-  } else if (currentQuizz) {
+  } else if (currentQuizz >= 0 && currentQuizz < quizzes.length) {
     return <View style={tailwind("flex flex-col mt-20")}>
-      <Quizz quizz={currentQuizz} config={config} onQuizzDone={saveQuizz} loading={saving} onClose={closeQuizz}/>
+      <Quizz quizz={quizzes[currentQuizz]} config={config} onQuizzDone={saveQuizz} loading={saving}
+             onClose={closeQuizz}/>
     </View>;
   } else {
-    return <View style={tailwind("h-full flex flex-col mt-20")} onTouchStart={() => devMode()}>
+    return <View style={tailwind("h-full flex flex-col mt-20")}>
       {
         quizzes.length > 0
           ? <QuizzList quizzes={quizzes} onSelect={selectQuizz}/>
@@ -238,9 +255,10 @@ export default function App() {
       }
       <View style={tailwind("flex flex-col mt-20 items-center h-20")}>
         <Feather
-          style={tailwind("mt-20 text-center text-gray-500 border-gray-500 text-2xl font-bold p-4")}
+          style={tailwind("mt-20 text-center text-gray-500 border-gray-500 text-3xl font-bold p-4")}
           name="settings"
-          onPress={() => downloadConfig()}/>
+          onPress={() => downloadConfig()}
+          onLongPress={() => devMode()}/>
       </View>
     </View>;
   }

@@ -1,8 +1,8 @@
-import { Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import React, { useEffect, useState } from "react";
 import tailwind from "tailwind-rn";
 import { JiraConfig, Task } from "./Quizz";
-import { getJiraTicket, JiraIssue } from "../utils/jira";
+import { getJiraTicket, JiraIssue } from "../api/jira";
 
 interface TaskItemProps {
   index: number;
@@ -10,6 +10,20 @@ interface TaskItemProps {
   selected?: boolean;
   onSelect?: (taskIndex: number) => void;
   defaultJiraConfig: JiraConfig;
+}
+
+
+interface TicketSummaryProps {
+  summary?: string;
+}
+
+export function TicketSummary({summary}: TicketSummaryProps) {
+  if (summary) {
+    return <Text style={tailwind(`text-gray-600 text-xs`)}>{summary}</Text>;
+  }
+  return <View>
+    <ActivityIndicator animating={true} size="large" color="#9CA3AF"/>
+  </View>;
 }
 
 export function TaskItem({index, value, selected = false, onSelect, defaultJiraConfig}: TaskItemProps) {
@@ -35,6 +49,6 @@ export function TaskItem({index, value, selected = false, onSelect, defaultJiraC
       <View style={tailwind("flex-1")}/>
       {ticket && <Text style={tailwind(`text-gray-500 text-sm font-bold`)}>{ticket.key}</Text>}
     </View>
-    {ticket?.summary && <Text style={tailwind(`text-gray-600 text-xs`)}>{ticket.summary}</Text>}
+    {value.jira?.status && <TicketSummary summary={ticket?.summary}/>}
   </View>;
 }
