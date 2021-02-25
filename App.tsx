@@ -73,8 +73,9 @@ async function readQuizzTodo(): Promise<QuizzDate[]> {
   return JSON.parse(inputContent) as QuizzDate[];
 }
 
-async function saveQuizzTodo(quizzes: QuizzDate[]) {
+async function persistQuizzes(quizzes: QuizzDate[]) {
   await FileSystem.writeAsStringAsync(quizzTodoFile, JSON.stringify(quizzes), {encoding: FileSystem.EncodingType.UTF8});
+  return quizzes;
 }
 
 async function readConfig(): Promise<Config | undefined> {
@@ -135,10 +136,6 @@ export default function App() {
   const responseListener = useRef();
 
   useEffect(() => {
-    saveQuizzTodo(quizzes).then(() => console.log("Quizzes todo saved"));
-  }, [quizzes]);
-
-  useEffect(() => {
     if (Platform.OS !== 'web') {
       readQuizzTodo()
         .then(quizzes => setQuizzes(quizzes));
@@ -159,11 +156,14 @@ export default function App() {
     if (Platform.OS !== 'web') {
       notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
         const date = new Date(notification.date);
-        setQuizzes([...quizzes, FromDate(date)]);
+        persistQuizzes([...quizzes, FromDate(date)])
+          .then(q => setQuizzes(q));
       });
 
-      responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        setCurrentQuizz(quizzes.length - 1);
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {
+        if (quizzes.length > 0) {
+          setCurrentQuizz(quizzes.length - 1);
+        }
       });
 
       return () => {
@@ -191,8 +191,9 @@ export default function App() {
         }
       }
       await persistCsvTimesheet(quizzDone);
+      const newQuizzes = await persistQuizzes(quizzes.filter(d => d !== quizzDone.date));
       setCurrentQuizz(-1);
-      setQuizzes(quizzes.filter(d => d !== quizzDone.date));
+      setQuizzes(newQuizzes);
     } finally {
       setSaving(false);
     }
