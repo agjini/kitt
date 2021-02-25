@@ -84,6 +84,7 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
   }
 
   const [hours, setHours] = useState(defaultHours);
+  const [x, setX] = useState(0);
   const [width, setWidth] = useState(0);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
 
@@ -97,20 +98,18 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
   };
 
   const onLayout = (e: LayoutChangeEvent) => {
+    setX(e.nativeEvent.layout.x);
     setWidth(e.nativeEvent.layout.width);
   };
 
   const onTouchMove = useCallback((e: GestureResponderEvent) => {
     if (width > 0) {
-      let i = Math.floor((e.nativeEvent.pageX / width) * hours.length);
-      if (i < 0) {
-        i = 0;
-      } else if (i > (hours.length - 1)) {
-        i = hours.length - 1;
+      let i = Math.floor(((e.nativeEvent.pageX - x) / width) * hours.length);
+      if (i >= 0 && i <= (hours.length - 1)) {
+        setHourValue(i, currentTaskIndex);
       }
-      setHourValue(i, currentTaskIndex);
     }
-  }, [currentTaskIndex, hours, width]);
+  }, [currentTaskIndex, hours, x, width]);
 
   const submit = useCallback(() => {
     const times = config.tasks
@@ -127,7 +126,7 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
     onQuizzDone({date: quizz, times});
   }, [hours]);
 
-  return <View style={tailwind("h-full flex")}>
+  return <View style={tailwind("h-full flex items-center")}>
     <View style={tailwind("items-center")}>
       <Text
         style={tailwind("m-4 text-xl text-gray-600 font-bold")}>{format(ToDate(quizz), "iiii dd MMM yyyy", {locale: fr})}</Text>
@@ -139,16 +138,16 @@ export function Quizz({quizz, config, onQuizzDone, loading = false, onClose}: Qu
           onTouchMove={onTouchMove}>
       {hours.map((h, i) => <HourBox key={i} value={h} tasks={config.tasks}/>)}
     </View>
-    <View style={tailwind("absolute bottom-0 mt-24 w-full")}>
+    <View style={tailwind("absolute bottom-0 mt-24 w-full bg-gray-600")}>
       {
         loading
-          ? <ActivityIndicator animating={true} size="large" color="#9CA3AF"/>
+          ? <ActivityIndicator animating={true} size="large" color="#F3F4F6"/>
           : <View style={tailwind("flex flex-row w-full justify-around")}>
-            <View style={tailwind("items-center p-10 border-2 border-gray-200 rounded")} onTouchStart={() => onClose()}>
-              <Feather style={tailwind(`text-gray-500 font-bold text-4xl`)} name="skip-back"/>
+            <View style={tailwind("items-center p-10")} onTouchStart={() => onClose()}>
+              <Feather style={tailwind(`text-gray-100 font-bold text-4xl`)} name="skip-back"/>
             </View>
-            <View style={tailwind("items-center p-10 border-2 border-gray-200 rounded")} onTouchStart={() => submit()}>
-              <Feather style={tailwind(`text-blue-500 font-bold text-4xl`)} name="save"/>
+            <View style={tailwind("items-center p-10")} onTouchStart={() => submit()}>
+              <Feather style={tailwind(`text-gray-100 font-bold text-4xl`)} name="save"/>
             </View>
           </View>
       }

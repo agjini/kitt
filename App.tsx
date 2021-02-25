@@ -37,8 +37,14 @@ async function registerNotificationOnDay(weekday: number) {
 
 async function registerNotification() {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  for (let weekday = 2; weekday < 7; weekday++) {
-    await registerNotificationOnDay(weekday);
+  if (__DEV__) {
+    console.log("No notification registred in dev mode");
+    return false;
+  } else {
+    for (let weekday = 2; weekday < 7; weekday++) {
+      await registerNotificationOnDay(weekday);
+    }
+    return true;
   }
 }
 
@@ -147,7 +153,11 @@ export default function App() {
         .then(files => setFiles(files));
 
       registerNotification()
-        .then(() => console.log("Notifications registered"));
+        .then(r => {
+          if (r) {
+            console.log("Notifications registered");
+          }
+        });
     }
   }, []);
 
